@@ -8,8 +8,9 @@ import (
 )
 
 const (
-	stackBase    = 0x0100
-	irqBrkVector = 0xfffe
+	stackBase = 0x0100
+	brkVector = 0xfffe
+	irqVector = brkVector
 )
 
 type CPU struct {
@@ -373,10 +374,10 @@ var (
 	}
 
 	cantRead = func(opcode uint8, name string) uint8 {
-		panic(fmt.Sprintf("0x%02X can't read() using %q addressing mode", opcode, name))
+		panic(fmt.Sprintf("0x%02X: can't read() using %q addressing mode", opcode, name))
 	}
 	cantWrite = func(opcode uint8, name string) {
-		panic(fmt.Sprintf("0x%02X can't write() using %q addressing mode", opcode, name))
+		panic(fmt.Sprintf("0x%02X: can't write() using %q addressing mode", opcode, name))
 	}
 )
 
@@ -657,32 +658,32 @@ func (cpu *CPU) logZeroPageYIndexed() string {
 
 // flags returns the CPU status flags packed into a byte.
 func (cpu *CPU) flags() uint8 {
-	ps := uint8(0)
+	b := uint8(0)
 	if cpu.n {
-		ps |= 0x80
+		b |= 0x80
 	}
 	if cpu.v {
-		ps |= 0x40
+		b |= 0x40
 	}
 
-	ps |= 0x20 // bit 5 is always set to 1.
+	b |= 0x20 // bit 5 is always set to 1.
 
 	if cpu.b {
-		ps |= 0x10
+		b |= 0x10
 	}
 	if cpu.d {
-		ps |= 0x08
+		b |= 0x08
 	}
 	if cpu.i {
-		ps |= 0x04
+		b |= 0x04
 	}
 	if cpu.z {
-		ps |= 0x02
+		b |= 0x02
 	}
 	if cpu.c {
-		ps |= 0x01
+		b |= 0x01
 	}
-	return ps
+	return b
 }
 
 // lax load accumulator and index register x from memory.
@@ -789,13 +790,13 @@ func (cpu *CPU) php() {
 func (cpu *CPU) plp() {
 	// two instructions (plp and rti) pull a byte from the stack and set all
 	// the flags. they ignore bits 5 and 4.
-	ps := cpu.pop()
-	cpu.n = ps&0x80 != 0
-	cpu.v = ps&0x40 != 0
-	cpu.d = ps&0x08 != 0
-	cpu.i = ps&0x04 != 0
-	cpu.z = ps&0x02 != 0
-	cpu.c = ps&0x01 != 0
+	b := cpu.pop()
+	cpu.n = b&0x80 != 0
+	cpu.v = b&0x40 != 0
+	cpu.d = b&0x08 != 0
+	cpu.i = b&0x04 != 0
+	cpu.z = b&0x02 != 0
+	cpu.c = b&0x01 != 0
 }
 
 // asl arithmetic shift left.
@@ -818,26 +819,26 @@ func (cpu *CPU) lsr() {
 
 // rol rotate left.
 func (cpu *CPU) rol() {
-	c := cpu.c
 	b := cpu.read()
-	cpu.c = b&0x80 != 0
+	c := b&0x80 != 0
 	b <<= 1
-	if c {
-		b |= 1
+	if cpu.c {
+		b |= 0x01
 	}
+	cpu.c = c
 	cpu.write(b)
 	cpu.setZN(b)
 }
 
 // ror rotate right.
 func (cpu *CPU) ror() {
-	c := cpu.c
 	b := cpu.read()
-	cpu.c = b&0x01 != 0
+	c := b&0x01 != 0
 	b >>= 1
-	if c {
+	if cpu.c {
 		b |= 0x80
 	}
+	cpu.c = c
 	cpu.write(b)
 	cpu.setZN(b)
 }
@@ -1003,8 +1004,8 @@ func (cpu *CPU) brk() {
 	cpu.pushPC()
 	cpu.php()
 	cpu.sei()
-	cpu.pc = uint16(cpu.mem[irqBrkVector])
-	cpu.pc |= uint16(cpu.mem[irqBrkVector+1]) << 8
+	cpu.pc = uint16(cpu.mem[brkVector])
+	cpu.pc |= uint16(cpu.mem[brkVector+1]) << 8
 }
 
 // jmp jmp indirect.
@@ -1117,5 +1118,5 @@ func (cpu *CPU) nop() {
 
 // unk unknown instruction, panic!
 func (cpu *CPU) unk() {
-	panic(fmt.Sprintf("0x%02X unknown opcode", cpu.inst.opcode))
+	panic(fmt.Sprintf("unknown opcode: 0x%02X", cpu.inst.opcode))
 }
