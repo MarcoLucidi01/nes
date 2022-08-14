@@ -8,6 +8,8 @@ import (
 	"regexp"
 	"strconv"
 	"testing"
+
+	"github.com/MarcoLucidi01/nes/nes"
 )
 
 const nestestFailFmt = `nestest.log:%d
@@ -38,23 +40,26 @@ func TestNestestNoPPU(t *testing.T) {
 	}
 	defer logFile.Close()
 
+	var bus nes.Bus
 	cpu := CPU{
 		sp:     0xfd,
 		pc:     0xc000,
 		i:      true,
 		cycles: 7,
-		mem:    make([]uint8, 1<<16),
+		bus:    &bus,
 	}
-	copy(cpu.mem[0x8000:0xBFFF], rom[0x0010:0x4010])
-	copy(cpu.mem[0xC000:0xFFFF], rom[0x0010:0x4010])
+	for i := uint16(0x0010); i < 0x4010; i++ {
+		bus.Write(0x8000+i-0x0010, rom[i])
+		bus.Write(0xc000+i-0x0010, rom[i])
+	}
 
 	// TODO these addresses are APU memory map which are not implemented
 	// yet, putting 0xff there makes nestest.log pass the last few lines.
-	cpu.mem[0x4004] = 0xff
-	cpu.mem[0x4005] = 0xff
-	cpu.mem[0x4006] = 0xff
-	cpu.mem[0x4007] = 0xff
-	cpu.mem[0x4015] = 0xff
+	cpu.bus.Write(0x4004, 0xff)
+	cpu.bus.Write(0x4005, 0xff)
+	cpu.bus.Write(0x4006, 0xff)
+	cpu.bus.Write(0x4007, 0xff)
+	cpu.bus.Write(0x4015, 0xff)
 
 	rePPU := regexp.MustCompile(" PPU:...,...")
 	rePS := regexp.MustCompile(" P:(..)")
@@ -90,21 +95,24 @@ func Test6502FunctionalTest(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	var bus nes.Bus
 	cpu := CPU{
 		sp:  0xfd,
-		pc:  0x0400,
+		pc:  0x4020,
 		i:   true,
-		mem: make([]uint8, 1<<16),
+		bus: &bus,
 	}
-	copy(cpu.mem[0x000a:], rom)
+	for i, b := range rom {
+		bus.Write(0x4020+uint16(i), b)
+	}
 
 	for {
 		cpu.fetch()
 		//fmt.Println(cpu.log())
 		cpu.exec()
 		if cpu.prevpc == cpu.pc {
-			if cpu.pc == 0x3699 {
-				return // if we get to 0x3699 SUCCESS!
+			if cpu.pc == 0x72d9 {
+				return // if we get here SUCCESS!
 			}
 			t.Fatalf("detected infinite loop at 0x%04X", cpu.pc)
 		}
@@ -117,13 +125,16 @@ func TestTTL6502(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	var bus nes.Bus
 	cpu := CPU{
 		sp:  0xfd,
 		pc:  0xc000,
 		i:   true,
-		mem: make([]uint8, 1<<16),
+		bus: &bus,
 	}
-	copy(cpu.mem[0xe000:], rom)
+	for i, b := range rom {
+		bus.Write(0xe000+uint16(i), b)
+	}
 
 	for {
 		cpu.fetch()

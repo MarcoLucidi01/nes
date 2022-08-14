@@ -5,6 +5,8 @@ package cpu
 import (
 	"fmt"
 	"strings"
+
+	"github.com/MarcoLucidi01/nes/nes"
 )
 
 const (
@@ -33,7 +35,7 @@ type CPU struct {
 
 	cycles uint64 // number of cycles.
 
-	mem []uint8 // memory.
+	bus *nes.Bus // system bus.
 
 	inst   instruction // current fetched instruction.
 	instB2 uint8       // instruction second byte (optional).
@@ -390,7 +392,7 @@ func (cpu *CPU) fetch() {
 	cpu.prevpc = cpu.pc
 
 	fetchByte := func() uint8 {
-		b := cpu.mem[cpu.pc]
+		b := cpu.bus.Read(cpu.pc)
 		cpu.pc++
 		return b
 	}
@@ -415,13 +417,13 @@ func (cpu *CPU) setZN(b uint8) {
 }
 
 func (cpu *CPU) push(b uint8) {
-	cpu.mem[stackBase+uint16(cpu.sp)] = b
+	cpu.bus.Write(stackBase+uint16(cpu.sp), b)
 	cpu.sp--
 }
 
 func (cpu *CPU) pop() uint8 {
 	cpu.sp++
-	return cpu.mem[stackBase+uint16(cpu.sp)]
+	return cpu.bus.Read(stackBase + uint16(cpu.sp))
 }
 
 func (cpu *CPU) pushPC() {
@@ -446,7 +448,7 @@ func (cpu *CPU) read() uint8 {
 	if cpu.inst.mode.read != nil {
 		return cpu.inst.mode.read(cpu)
 	}
-	return cpu.mem[cpu.addr()]
+	return cpu.bus.Read(cpu.addr())
 }
 
 // read a byte using the current instruction addressing mode, but don't
@@ -458,7 +460,7 @@ func (cpu *CPU) readWithoutExtracycle() uint8 {
 		return cpu.inst.mode.read(cpu)
 	}
 	addr, _ := cpu.inst.mode.addr(cpu)
-	return cpu.mem[addr]
+	return cpu.bus.Read(addr)
 }
 
 // write a byte using the current instruction addressing mode.
@@ -467,7 +469,7 @@ func (cpu *CPU) write(b uint8) {
 		cpu.inst.mode.write(cpu, b)
 		return
 	}
-	cpu.mem[cpu.addr()] = b
+	cpu.bus.Write(cpu.addr(), b)
 }
 
 // addr returns the "real" address calculated using the current instruction
@@ -488,7 +490,7 @@ func (cpu *CPU) addrAbsolute() (uint16, bool) {
 func (cpu *CPU) addrAbsoluteIndirect() (uint16, bool) {
 	base, _ := cpu.addrAbsolute()
 	base1 := ((base + 1) & 0x00ff) | (base & 0xff00)
-	return uint16(cpu.mem[base1])<<8 | uint16(cpu.mem[base]), false
+	return uint16(cpu.bus.Read(base1))<<8 | uint16(cpu.bus.Read(base)), false
 }
 
 func (cpu *CPU) addrAbsoluteXIndexed() (uint16, bool) {
@@ -529,9 +531,9 @@ func (cpu *CPU) addrZeroPage() (uint16, bool) {
 }
 
 func (cpu *CPU) addrZeroPageIndirectYIndexed() (uint16, bool) {
-	base := cpu.mem[cpu.instB2]
+	base := cpu.bus.Read(uint16(cpu.instB2))
 	lo := uint16(base) + uint16(cpu.y) // uint16 to get carry.
-	base1 := cpu.mem[cpu.instB2+1]
+	base1 := cpu.bus.Read(uint16(cpu.instB2 + 1))
 	hi := base1 + uint8((lo&0x100)>>8)
 	addr := uint16(hi)<<8 | uint16(lo&0xff)
 	return addr, pageCrossed(uint16(base1)<<8|uint16(base), addr)
@@ -543,7 +545,7 @@ func (cpu *CPU) addrZeroPageXIndexed() (uint16, bool) {
 
 func (cpu *CPU) addrZeroPageXIndexedIndirect() (uint16, bool) {
 	base := cpu.instB2 + cpu.x
-	return uint16(cpu.mem[base+1])<<8 | uint16(cpu.mem[base]), false
+	return uint16(cpu.bus.Read(uint16(base+1)))<<8 | uint16(cpu.bus.Read(uint16(base))), false
 }
 
 func (cpu *CPU) addrZeroPageYIndexed() (uint16, bool) {
@@ -635,7 +637,7 @@ func (cpu *CPU) logZeroPage() string {
 }
 
 func (cpu *CPU) logZeroPageIndirectYIndexed() string {
-	base := uint16(cpu.mem[cpu.instB2+1])<<8 | uint16(cpu.mem[cpu.instB2])
+	base := uint16(cpu.bus.Read(uint16(cpu.instB2+1)))<<8 | uint16(cpu.bus.Read(uint16(cpu.instB2)))
 	addr, _ := cpu.addrZeroPageIndirectYIndexed()
 	return fmt.Sprintf("($%02X),Y = %04X @ %04X = %02X", cpu.instB2, base, addr, cpu.readWithoutExtracycle())
 }
@@ -1004,8 +1006,8 @@ func (cpu *CPU) brk() {
 	cpu.pushPC()
 	cpu.php()
 	cpu.sei()
-	cpu.pc = uint16(cpu.mem[brkVector])
-	cpu.pc |= uint16(cpu.mem[brkVector+1]) << 8
+	cpu.pc = uint16(cpu.bus.Read(brkVector))
+	cpu.pc |= uint16(cpu.bus.Read(brkVector+1)) << 8
 }
 
 // jmp jmp indirect.

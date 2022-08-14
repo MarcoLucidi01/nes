@@ -90,7 +90,7 @@ ROM_vectors = 1
 ;load_data_direct (0=move from code segment, 1=load directly)
 ;loading directly is preferred but may not be supported by your platform
 ;0 produces only consecutive object code, 1 is not suitable for a binary image
-load_data_direct = 1
+load_data_direct = 0
 
 ;I_flag behavior (0=force enabled, 1=force disabled, 2=prohibit change, 3=allow
 ;change) 2 requires extra code and is not recommended. SEI & CLI can only be
@@ -100,7 +100,7 @@ I_flag = 3
 ;configure memory - try to stay away from memory used by the system
 ;zero_page memory start address, $52 (82) consecutive Bytes required
 ;                                add 2 if I_flag = 2
-zero_page = $a  
+zero_page = $0
 
 ;data_segment memory start address, $7B (123) consecutive Bytes required
 data_segment = $200  
@@ -110,7 +110,7 @@ data_segment = $200
 
 ;code_segment memory start address, 13.1kB of consecutive space required
 ;                                   add 2.5 kB if I_flag = 2
-code_segment = $400  
+code_segment = $4020
 
 ;self modifying code may be disabled to allow running in ROM
 ;0=part of the code is self modifying and must reside in RAM
