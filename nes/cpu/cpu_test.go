@@ -27,12 +27,12 @@ got PS:
 `
 
 func TestNestestNoPPU(t *testing.T) {
-	rom, err := os.ReadFile("testroms/nestest.nes")
+	rom, err := os.ReadFile("testdata/nestest.nes")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	logFile, err := os.Open("testroms/nestest.log")
+	logFile, err := os.Open("testdata/nestest.log")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -85,7 +85,7 @@ func TestNestestNoPPU(t *testing.T) {
 }
 
 func Test6502FunctionalTest(t *testing.T) {
-	rom, err := os.ReadFile("testroms/6502_functional_test.bin")
+	rom, err := os.ReadFile("testdata/6502_functional_test.bin")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -112,7 +112,7 @@ func Test6502FunctionalTest(t *testing.T) {
 }
 
 func TestTTL6502(t *testing.T) {
-	rom, err := os.ReadFile("testroms/TTL6502.bin")
+	rom, err := os.ReadFile("testdata/TTL6502.bin")
 	if err != nil {
 		t.Fatal(err)
 	}
