@@ -1,0 +1,6 @@
+#!/bin/sh
+
+# header4test: extracts and formats the iNes header of a rom file for using it
+#              as test case in ines_test.go
+
+head -c 16 "$1" | xxd -i | tr -d ' \n' | sed -e 's/^0/\\/' -e 's/,0/\\/g' -e 's/\(.*\)/header: []uint8("\1"),\n/'
