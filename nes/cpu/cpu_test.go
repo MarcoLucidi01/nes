@@ -29,11 +29,6 @@ got PS:
 `
 
 func TestNestestNoPPU(t *testing.T) {
-	rom, err := os.ReadFile("testdata/nestest.nes")
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	logFile, err := os.Open("testdata/nestest.log")
 	if err != nil {
 		t.Fatal(err)
@@ -41,16 +36,16 @@ func TestNestestNoPPU(t *testing.T) {
 	defer logFile.Close()
 
 	var bus nes.Bus
+	if err := bus.LoadRom("testdata/nestest.nes"); err != nil {
+		t.Fatal(err)
+	}
+
 	cpu := CPU{
 		sp:     0xfd,
 		pc:     0xc000,
 		i:      true,
 		cycles: 7,
 		bus:    &bus,
-	}
-	for i := uint16(0x0010); i < 0x4010; i++ {
-		bus.Write(0x8000+i-0x0010, rom[i])
-		bus.Write(0xc000+i-0x0010, rom[i])
 	}
 
 	// TODO these addresses are APU memory map which are not implemented
