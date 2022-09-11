@@ -2,7 +2,10 @@
 
 package nes
 
-import "fmt"
+import (
+	"fmt"
+	"os"
+)
 
 // TODO this is just a basic stub implementation of the bus and memory mappings.
 type Bus struct {
@@ -40,4 +43,31 @@ func (bus *Bus) Write(addr uint16, b uint8) {
 	default:
 		panic(fmt.Sprintf("address out of range: 0x%04X", addr))
 	}
+}
+
+// TODO this feels a bit out of place here, also we are coping the slices into
+// the bus's array but we could just use the rom slices. needs to be improved.
+func (bus *Bus) LoadRom(fname string) error {
+	f, err := os.Open(fname)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	rom, err := ReadRom(f)
+	if err != nil {
+		return err
+	}
+
+	for i, b := range rom.Prg {
+		bus.Write(0x8000+uint16(i), b)
+	}
+	if rom.PrgBanks == 1 {
+		// mirror first (and only) bank to 0xc000-0xffff
+		for i, b := range rom.Prg {
+			bus.Write(0xc000+uint16(i), b)
+		}
+	}
+
+	return nil
 }
