@@ -1,3 +1,5 @@
+// See license file for copyright and license details.
+
 package nes
 
 import "fmt"
@@ -12,13 +14,13 @@ type Bus struct {
 
 func (bus *Bus) Read(addr uint16) uint8 {
 	switch {
-	case addr >= 0x0000 && addr <= 0x1fff:
+	case addr <= 0x1fff:
 		return bus.ram[addr&0x07ff]
-	case addr >= 0x2000 && addr <= 0x3fff:
+	case addr <= 0x3fff:
 		return bus.ppu[addr&0x0007]
-	case addr >= 0x4000 && addr <= 0x401f:
+	case addr <= 0x401f:
 		return bus.apu[addr&0x001f]
-	case addr >= 0x4020 && addr <= 0xffff:
+	case addr <= 0xffff:
 		return bus.car[addr-0x4020]
 	default:
 		panic(fmt.Sprintf("address out of range: 0x%04X", addr))
@@ -27,13 +29,13 @@ func (bus *Bus) Read(addr uint16) uint8 {
 
 func (bus *Bus) Write(addr uint16, b uint8) {
 	switch {
-	case addr >= 0x0000 && addr <= 0x1fff:
+	case addr <= 0x1fff:
 		bus.ram[addr&0x07ff] = b
-	case addr >= 0x2000 && addr <= 0x3fff:
+	case addr <= 0x3fff:
 		bus.ppu[addr&0x0007] = b
-	case addr >= 0x4000 && addr <= 0x401f:
+	case addr <= 0x401f:
 		bus.apu[addr&0x001f] = b
-	case addr >= 0x4020 && addr <= 0xffff:
+	case addr <= 0xffff:
 		bus.car[addr-0x4020] = b
 	default:
 		panic(fmt.Sprintf("address out of range: 0x%04X", addr))
